@@ -1,6 +1,7 @@
-const aws = require("aws-sdk");
-const multer = require("multer");
-const multerS3 = require("multer-s3");
+import aws from 'aws-sdk';
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+
 const s3 = new aws.S3();
 const BUCKET_NAME = process.env.BUCKET_NAME;
 
@@ -18,7 +19,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({
+export const s3Upload = multer({
   fileFilter,
   storage: multerS3({
     s3: s3,
@@ -36,5 +37,3 @@ const upload = multer({
     },
   }),
 });
-
-exports.s3Upload = upload; 

@@ -1,9 +1,11 @@
-const express = require('express');
-const helmet = require("helmet");
-const cors = require('cors');
-const { s3Upload } = require('./uploadS3.js');
-const { gcpUpload, multer } = require('./uploadGCP.js');
-const { sendEmail } = require('./sendEmail.js');
+import express from 'express';
+import helmet from "helmet";
+import cors from 'cors';
+import { s3Upload } from './uploadS3.js';
+import { gcpUpload} from './uploadGCP.js';
+import { sendEmail } from './sendEmail.js';
+import { multer } from './multer.js';
+import { dictation } from './wit.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,7 +18,7 @@ app.post('/services/upload/s3', s3Upload.single('file'), (req, res) => {
   res.status(200).json({ success: true, fileLocation: req.file.location });
 });
 
-app.post('/services/upload/gcp/:bucket', multer.single('file'), (req, res, next) => {
+app.post('/services/upload/gcp/:bucket', multer.single('file'), async (req, res) => {
   if (!req.file) {
     res.status(400).send('No file uploaded.');
     return;
@@ -26,7 +28,34 @@ app.post('/services/upload/gcp/:bucket', multer.single('file'), (req, res, next)
     return;
   }
 
-  gcpUpload(req, res, next);
+  try {
+    const result = await gcpUpload(req);
+    res.status(200).send(result);
+  }
+  catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file) {
+    res.status(400).send('No file uploaded.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = await gcpUpload(req);
+    const result = await dictation(req.file);
+
+    res.status(result.status).send({...uploadResult, result: result});
+  }
+  catch (err) {
+    res.status(500).send(err);
+  }
 });
 
 app.post('/services/notify/completion', async(req, res)=>{
@@ -42,6 +71,17 @@ app.post('/services/notify/completion', async(req, res)=>{
       console.log(e);
       res.sendStatus(500);
   }
+});
+
+app.post('/services/speech/analysis', multer.single('file'), (req, res) => {
+  if (!req.file) {
+    res.status(400).send('No file uploaded.');
+    return;
+  }
+
+  dictation(req.file)
+    .then(result => res.status(result.status).send(result))
+    .catch(e => res.status(500).send(e));
 });
 
 app.get('/', (req, res) => {
