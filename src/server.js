@@ -6,6 +6,7 @@ import { gcpUpload} from './uploadGCP.js';
 import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
 import { dictation } from './wit.js';
+import { analyseText, calculateVocabRange } from './textAnalysis.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -81,6 +82,20 @@ app.post('/services/speech/analysis', multer.single('file'), (req, res) => {
 
   dictation(req.file)
     .then(result => res.status(result.status).send(result))
+    .catch(e => res.status(500).send(e));
+});
+
+app.post('/services/text/analysis', (req, res) => {
+  console.log(req.body);
+  if (!req.body.text) {
+    res.status(400).send('Text is required.');
+    return;
+  }
+  analyseText(req.body.text)
+    .then(result => {
+      if (req.body.vocabularyRange == 'true') result.vocabularyRange = calculateVocabRange(req.body.text);
+      res.status(200).send(result);
+    })
     .catch(e => res.status(500).send(e));
 });
 
