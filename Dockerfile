@@ -1,10 +1,11 @@
 FROM node:16-alpine
 
 WORKDIR /usr/src/app
-COPY . .
 
-RUN npm ci --only=production
+COPY ./dist/index.js .
+COPY ./assets ./assets
+COPY ./gcp-storage-upload.json .
 
 EXPOSE 3000
 
-CMD [ "node", "src/server.js" ]
+CMD [ "node", "index.js" ]
