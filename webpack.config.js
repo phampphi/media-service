@@ -1,4 +1,5 @@
 var path = require('path');
+const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = function (env) {
     return [{
@@ -20,8 +21,17 @@ module.exports = function (env) {
                 },
             }]
         },
+        optimization: {
+            minimize: true,
+            minimizer: [
+                new TerserPlugin({
+                  terserOptions: {
+                    keep_fnames: /AbortSignal/,
+                  },
+                }),
+            ]
+        },
         devtool: 'source-map'
     },
-
     ]
 }

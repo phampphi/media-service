@@ -1,5 +1,5 @@
-import {format} from 'util';
-import {Storage} from '@google-cloud/storage';
+import { Storage } from '@google-cloud/storage';
+import stream from 'stream'
 
 const storage = new Storage({ keyFilename: "gcp-storage-upload.json" });
 
@@ -8,25 +8,20 @@ export const gcpUpload = function (req) {
     const bucket = storage.bucket(req.params.bucket);
 
     const blob = bucket.file(req.file.originalname);
-    const blobStream = blob.createWriteStream();
 
-    blobStream.on('error', err => {
-      reject(err);
-    });
+    const passthroughStream = new stream.PassThrough();
+    passthroughStream.write(req.file.buffer);
+    passthroughStream.end();
 
-    blobStream.on('finish', async () => {
-      // The public URL can be used to directly access the file via HTTP.
-      const publicUrl = format(
-        `https://storage.googleapis.com/${bucket.name}/${blob.name}`
-      );
+    passthroughStream.pipe(blob.createWriteStream())
+      .on('finish', () => {
+        console.log(`${req.file.originalname} uploaded sucessfully`);
 
-      console.log(`${req.file.originalname} - Uploaded the file successfully`);
-      resolve({
-        message: "Uploaded the file successfully: " + req.file.originalname,
-        fileLocation: publicUrl,
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+        resolve({
+          message: "Uploaded the file successfully: " + req.file.originalname,
+          fileLocation: publicUrl,
+        });
       });
-    });
-
-    blobStream.end(req.file.buffer);
   })
 }

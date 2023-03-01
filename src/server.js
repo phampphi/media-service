@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from "helmet";
 import cors from 'cors';
 import { expressjwt } from 'express-jwt';
-import { s3Upload } from './uploadS3.js';
+// import { s3Upload } from './uploadS3.js';
 import { gcpUpload } from './uploadGCP.js';
 import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
@@ -24,9 +24,9 @@ app.use(
   }).unless({ path: ["/", "/services"] })
 );
 
-app.post('/services/upload/s3', s3Upload.single('file'), (req, res) => {
-  res.status(200).json({ success: true, fileLocation: req.file.location });
-});
+// app.post('/services/upload/s3', s3Upload.single('file'), (req, res) => {
+//   res.status(200).json({ success: true, fileLocation: req.file.location });
+// });
 
 app.post('/services/upload/gcp/:bucket', multer.single('file'), async (req, res) => {
   if (!req.file) {
@@ -43,6 +43,7 @@ app.post('/services/upload/gcp/:bucket', multer.single('file'), async (req, res)
     res.status(200).send(result);
   }
   catch (err) {
+    console.log(err.message);
     res.status(500).send(err);
   }
 });
@@ -65,6 +66,7 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
     res.status(result.status).send({ ...uploadResult, result: result });
   }
   catch (err) {
+    console.log(err.message);
     res.status(500).send(err);
   }
 });

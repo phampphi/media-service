@@ -3,3 +3,4 @@ dist
 temp
 .env
 gcp-storage-upload.json
+docker-compose.yml

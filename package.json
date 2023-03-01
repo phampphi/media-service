@@ -1,6 +1,6 @@
 {
   "name": "media-services",
-  "version": "1.0.1",
+  "version": "1.0.5",
   "description": "NodeJs Express to handle various media services",
   "author": "pham.pphi@gmail.com",
   "main": "dist/index.js",
@@ -11,15 +11,13 @@
     "dev": "npm run build:dev && npm run start"
   },
   "dependencies": {
-    "@google-cloud/storage": "^6.7.0",
+    "@google-cloud/storage": "^6.9.3",
     "@pdfme/generator": "^1.1.5",
     "@sendgrid/mail": "^7.7.0",
-    "aws-sdk": "^2.1262.0",
     "chart.js": "^3.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "cors": "^2.8.5",
     "csv-parse": "^5.3.3",
-    "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "express-jwt": "^8.3.0",
     "helmet": "^6.0.0",
@@ -30,6 +28,8 @@
     "quickchart-js": "^3.1.2"
   },
   "devDependencies": {
+    "dotenv": "^16.0.3",
+    "terser-webpack-plugin": "^5.3.6",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"
   }
