@@ -10,13 +10,14 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME
 });
 
-const sql = `select additionals, timecreated from mdl_h5pactivity_attempts_results 
+const dbPrefix = process.env.DB_PREFIX || "";
+const sql = `select additionals, timecreated from ${dbPrefix}h5pactivity_attempts_results 
               where interactiontype = 'compound'
-              and attemptid in (select max(id) from mdl_h5pactivity_attempts 
+              and attemptid in (select max(id) from ${dbPrefix}h5pactivity_attempts 
                                 where userId = ?
-                                and h5pactivityid in (select instance from mdl_course_modules where id in (?))
+                                and h5pactivityid in (select instance from ${dbPrefix}course_modules where id in (?))
                                 group by h5pactivityid)`;
-const userSql = 'select id, firstname, lastname, email, country from mdl_user where id = ?';
+const userSql = `select id, firstname, lastname, email, country from ${dbPrefix}user where id = ?`;
 
 const PTE_SKILLS = ['Listening', 'Reading', 'Speaking', 'Writing'];
 const ENABLING_SKILLS = ['Grammar', 'Oral Fluency', 'Pronunciation', 'Spelling', 'Vocabulary', 'Written Discourse'];
@@ -44,7 +45,7 @@ export const generatePTEReport = async (userId, activityIds) => {
 
   const scores = {};
   const pteScoresArr = [0, 0, 0, 0];
-  const enablingScoresArr = [0, 0, 0, 0, 0, 0];
+  const enablingScoresArr = [{ score: 0, count: 0 }, { score: 0, count: 0 }, { score: 0, count: 0 }, { score: 0, count: 0 }, { score: 0, count: 0 }, { score: 0, count: 0 }];
   let overall = 0;
   let testDate = 0;
   for (let result of results) {
@@ -61,7 +62,10 @@ export const generatePTEReport = async (userId, activityIds) => {
         pteScoresArr[PTE_SKILLS.indexOf(t)] += taggedScore[tag];
         scores[t] = !!scores[t] ? scores[t] + taggedScore[tag] : taggedScore[tag];
       }
-      if (!!ENABLING_SKILLS_MAPPING[t]) enablingScoresArr[ENABLING_SKILLS.indexOf(ENABLING_SKILLS_MAPPING[t])] += taggedScore[t];
+      if (!!ENABLING_SKILLS_MAPPING[t]) {
+        enablingScoresArr[ENABLING_SKILLS.indexOf(ENABLING_SKILLS_MAPPING[t])].score += taggedScore[t];
+        enablingScoresArr[ENABLING_SKILLS.indexOf(ENABLING_SKILLS_MAPPING[t])].count += 1;
+      }
     }
   }
   for (let key in scores) {
@@ -70,14 +74,14 @@ export const generatePTEReport = async (userId, activityIds) => {
   }
 
   const pteScoresChart = await generatePteScoreChart(PTE_SKILLS, pteScoresArr.map(s => Math.round(s)));
-  const enablingScoresChart = await generateEnablingScoreChart(ENABLING_SKILLS, enablingScoresArr.map(s => Math.round(s*90)));
-  const data = { 
-    ...user, 
-    ...scores, 
-    overall: `${Math.round(overall / PTE_SKILLS.length)}`, 
-    pteScoresChart, 
+  const enablingScoresChart = await generateEnablingScoreChart(ENABLING_SKILLS, enablingScoresArr.map(s => s.count == 0 ? 0 : Math.round((s.score / s.count) * 90)));
+  const data = {
+    ...user,
+    ...scores,
+    overall: `${Math.round(overall / PTE_SKILLS.length)}`,
+    pteScoresChart,
     enablingScoresChart,
-    testDate: new Intl.DateTimeFormat(process.env.LOCALE).format(new Date(testDate*1000))
+    testDate: new Intl.DateTimeFormat(process.env.LOCALE).format(new Date(testDate * 1000))
   };
 
   return await generatePDF(data);
