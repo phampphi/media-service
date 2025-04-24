@@ -39,5 +39,6 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         platforms: linux/amd64,linux/arm64
+        context: .
         push: true
         tags: ${{ secrets.DOCKER_USERNAME }}/media-services:1.0.5-ci
