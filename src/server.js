@@ -22,7 +22,7 @@ app.use(
     secret: process.env.JWT_SECRET,
     issuer: process.env.JWT_ISSUER,
     algorithms: ["HS256"],
-  }).unless({ path: ["/", "/services"] })
+  }).unless({ path: ["/", "/services", "/services/pte/report"] })
 );
 
 // app.post('/services/upload/s3', s3Upload.single('file'), (req, res) => {
@@ -188,7 +188,6 @@ const server = app.listen(port, function (err) {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server')
-  // releasePool();
   server.close(() => {
     console.log('HTTP server closed');
   })
