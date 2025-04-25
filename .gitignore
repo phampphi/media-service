@@ -3,4 +3,5 @@ dist
 temp
 .env
 gcp-storage-upload.json
+gcp-vertex-ai.json
 docker-compose.yml
