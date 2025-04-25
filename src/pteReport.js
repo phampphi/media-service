@@ -2,13 +2,13 @@ import mysql from 'mysql-await';
 import { generatePDF } from './genPdf.js'
 import { generatePteScoreChart, generateEnablingScoreChart } from './genChart.js';
 
-const pool = mysql.createPool({
-  connectionLimit: 10,
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-});
+// const pool = mysql.createPool({
+//   connectionLimit: 10,
+//   host: process.env.DB_HOST,
+//   user: process.env.DB_USER,
+//   password: process.env.DB_PASSWORD,
+//   database: process.env.DB_NAME
+// });
 
 const dbPrefix = process.env.DB_PREFIX || "";
 const sql = `select additionals, timecreated from ${dbPrefix}h5pactivity_attempts_results 
@@ -33,7 +33,7 @@ const ENABLING_SKILLS_MAPPING = {
 };
 
 export const generatePTEReport = async (userId, activityIds) => {
-  const userResults = await pool.awaitQuery(userSql, [userId]);
+  // const userResults = await pool.awaitQuery(userSql, [userId]);
   const user = {
     name: `${userResults[0].lastname} ${userResults[0].firstname}`,
     email: `${userResults[0].email}`,
@@ -41,7 +41,15 @@ export const generatePTEReport = async (userId, activityIds) => {
     id: 'PTE_' + `${userResults[0].id}`.padStart(3, '0')
   };
 
-  const results = await pool.awaitQuery(sql, [userId, activityIds]);
+  // const results = await pool.awaitQuery(sql, [userId, activityIds]);
+  const connection = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  });
+  const results = await connection.awaitQuery(sql, [userId, activityIds]);
+  connection.end((err) => { console.log('MySQL Connection terminated', err) });
 
   const scores = {};
   const pteScoresArr = [0, 0, 0, 0];
@@ -87,7 +95,7 @@ export const generatePTEReport = async (userId, activityIds) => {
   return await generatePDF(data);
 }
 
-export const releasePool = () => {
-  pool.end(() => { console.log('Connection pool released') });
-}
+// export const releasePool = () => {
+//   pool.end(() => { console.log('Connection pool released') });
+// }
 

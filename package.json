@@ -1,6 +1,6 @@
 {
   "name": "media-services",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "NodeJs Express to handle various media services",
   "author": "pham.pphi@gmail.com",
   "main": "dist/index.js",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google-cloud/storage": "^6.9.3",
+    "@google-cloud/vertexai": "^1.8.1",
     "@pdfme/generator": "^1.1.5",
     "@sendgrid/mail": "^7.7.0",
     "chart.js": "^3.5.1",

@@ -8,7 +8,8 @@ import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
 import { dictation } from './wit.js';
 import { analyseText, calculateVocabRange } from './textAnalysis.js';
-import { generatePTEReport, releasePool, generatePDF } from './pteReport.js';
+import { scoreEssay, scoreSWT, scoreSST } from './aiScoring.js';
+import { generatePTEReport } from './pteReport.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -61,7 +62,8 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
   try {
     const uploadResult = await gcpUpload(req);
     const result = await dictation(req.file);
-    // const result = { text: 'dummy', confidence: 0.8, status: 200 };
+    
+    //const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
 
     res.status(result.status).send({ ...uploadResult, result: result });
   }
@@ -111,6 +113,42 @@ app.post('/services/text/analysis', (req, res) => {
     .catch(e => res.status(500).send(e));
 });
 
+app.post('/services/essay/scoring', (req, res) => {
+  if (!req.body.text || !req.body.topic) {
+    res.status(400).send('Text is required.');
+    return;
+  }
+  scoreEssay(req.body.topic, req.body.text)
+    .then(result => {
+      res.status(200).send(result);
+    })
+    .catch(e => { console.log('scoring essay error: ', e); res.status(500).send(e); });
+});
+
+app.post('/services/swt/scoring', (req, res) => {
+  if (!req.body.text || !req.body.topic) {
+    res.status(400).send('Topic or Answer Text is required.');
+    return;
+  }
+  scoreSWT(req.body.topic, req.body.text)
+    .then(result => {
+      res.status(200).send(result);
+    })
+    .catch(e => { console.log('scoring SWT error: ', e); res.status(500).send(e); });
+});
+
+app.post('/services/sst/scoring', (req, res) => {
+  if (!req.body.text || !req.body.audioUri) {
+    res.status(400).send('AudioUri or Answer Text is required.');
+    return;
+  }
+  scoreSST(req.body.audioUri, req.body.text)
+    .then(result => {
+      res.status(200).send(result);
+    })
+    .catch(e => { console.log('scoring SST error: ', e); res.status(500).send(e); });
+});
+
 app.get('/services/pte/report', async (req, res) => {
   if (!req.query.userId) {
     res.status(400).send('No userId found.');
@@ -150,7 +188,7 @@ const server = app.listen(port, function (err) {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server')
-  releasePool();
+  // releasePool();
   server.close(() => {
     console.log('HTTP server closed');
   })
