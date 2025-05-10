@@ -62,8 +62,8 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const result = await dictation(req.file);
 
     res.status(result.status).send({ ...uploadResult, result: result });
@@ -168,8 +168,8 @@ app.post('/services/scoring/ra/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRA(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
@@ -188,8 +188,8 @@ app.post('/services/scoring/rs/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRS(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
@@ -208,8 +208,8 @@ app.post('/services/scoring/di/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const resultAI = await scoreDI(req.body.imageUri, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
@@ -228,8 +228,8 @@ app.post('/services/scoring/rl/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRL(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
@@ -248,8 +248,8 @@ app.post('/services/scoring/asq/:bucket', multer.single('file'), async (req, res
   }
 
   try {
-    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
-    // const uploadResult = await gcpUpload(req);
+    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    const uploadResult = await gcpUpload(req);
     const resultAI = await scoreASQ(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
