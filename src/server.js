@@ -8,7 +8,7 @@ import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
 import { dictation } from './wit.js';
 import { analyseText, calculateVocabRange } from './textAnalysis.js';
-import { scoreEssay, scoreSWT, scoreSST } from './aiScoring.js';
+import { scoreEssay, scoreSWT, scoreSST, scoreRA, scoreRS, scoreDI, scoreRL, scoreASQ } from './aiScoring.js';
 import { generatePTEReport } from './pteReport.js';
 
 const app = express();
@@ -29,6 +29,7 @@ app.use(
 //   res.status(200).json({ success: true, fileLocation: req.file.location });
 // });
 
+/** API to upload the audio answer to GCP bucket */
 app.post('/services/upload/gcp/:bucket', multer.single('file'), async (req, res) => {
   if (!req.file) {
     res.status(400).send('No file uploaded.');
@@ -49,6 +50,7 @@ app.post('/services/upload/gcp/:bucket', multer.single('file'), async (req, res)
   }
 });
 
+/** API to upload the audio answer to GCP bucket and provid dictation text. */
 app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res) => {
   if (!req.file) {
     res.status(400).send('No file uploaded.');
@@ -60,10 +62,9 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
   }
 
   try {
-    const uploadResult = await gcpUpload(req);
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
     const result = await dictation(req.file);
-    
-    //const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
 
     res.status(result.status).send({ ...uploadResult, result: result });
   }
@@ -73,6 +74,7 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
   }
 });
 
+/** API to send notification that the task has been completed. */
 app.post('/services/notify/completion', async (req, res) => {
   try {
     await sendEmail({
@@ -88,6 +90,7 @@ app.post('/services/notify/completion', async (req, res) => {
   }
 });
 
+/** API to analyse the audio answer and provide dictation text. */
 app.post('/services/speech/analysis', multer.single('file'), (req, res) => {
   if (!req.file) {
     res.status(400).send('No file uploaded.');
@@ -99,6 +102,7 @@ app.post('/services/speech/analysis', multer.single('file'), (req, res) => {
     .catch(e => res.status(500).send(e));
 });
 
+/** API to analyse the text answer, check grammar, and access vocabulary. */
 app.post('/services/text/analysis', (req, res) => {
   if (!req.body.text) {
     res.status(400).send('Text is required.');
@@ -113,9 +117,10 @@ app.post('/services/text/analysis', (req, res) => {
     .catch(e => res.status(500).send(e));
 });
 
-app.post('/services/essay/scoring', (req, res) => {
+/** API to generate score and feedback from AI model for PTE Essay task. */
+app.post('/services/scoring/essay', (req, res) => {
   if (!req.body.text || !req.body.topic) {
-    res.status(400).send('Text is required.');
+    res.status(400).send('Text or Topic is required.');
     return;
   }
   scoreEssay(req.body.topic, req.body.text)
@@ -125,7 +130,8 @@ app.post('/services/essay/scoring', (req, res) => {
     .catch(e => { console.log('scoring essay error: ', e); res.status(500).send(e); });
 });
 
-app.post('/services/swt/scoring', (req, res) => {
+/** API to generate score and feedback from AI model for PTE Summary Written Text task. */
+app.post('/services/scoring/swt', (req, res) => {
   if (!req.body.text || !req.body.topic) {
     res.status(400).send('Topic or Answer Text is required.');
     return;
@@ -137,16 +143,117 @@ app.post('/services/swt/scoring', (req, res) => {
     .catch(e => { console.log('scoring SWT error: ', e); res.status(500).send(e); });
 });
 
-app.post('/services/sst/scoring', (req, res) => {
-  if (!req.body.text || !req.body.audioUri) {
-    res.status(400).send('AudioUri or Answer Text is required.');
+/** API to generate score and feedback from AI model for PTE Summary Spoken Text task. */
+app.post('/services/scoring/sst', (req, res) => {
+  if (!req.body.text || !req.body.audioTranscript) {
+    res.status(400).send('AudioTranscript or Answer Text is required.');
     return;
   }
-  scoreSST(req.body.audioUri, req.body.text)
+  scoreSST(req.body.audioTranscript, req.body.text)
     .then(result => {
       res.status(200).send(result);
     })
     .catch(e => { console.log('scoring SST error: ', e); res.status(500).send(e); });
+});
+
+/** API to generate score and feedback from AI model for PTE Read Aloud task. */
+app.post('/services/scoring/ra/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or Transcript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreRA(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring RA error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Repeat Sentence task. */
+app.post('/services/scoring/rs/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or Transcript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreRS(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring RS error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Describe Image task. */
+app.post('/services/scoring/di/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.imageUri) {
+    res.status(400).send('AudioFile or ImageUri is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreDI(req.body.imageUri, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring DI error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Retell Lecture task. */
+app.post('/services/scoring/rl/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or AudioTranscript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreRL(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring RL error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Answer Short Question task. */
+app.post('/services/scoring/asq/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or AudioTranscript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
+    // const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreASQ(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring RL error: ', e); res.status(500).send(e); }
 });
 
 app.get('/services/pte/report', async (req, res) => {

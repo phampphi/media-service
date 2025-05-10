@@ -5,116 +5,156 @@ const vertexAI = new VertexAI({ project: process.env.GCP_PROJECT_ID, location: p
 const EssayResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_ESSAY);
 const SWTResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SWT);
 const SSTResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SST);
+const SPKResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SPK);
+const ASQResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_ASQ);
 
 export const scoreEssay = async function (topic, text) {
-  if (!topic || !text) return '';
+  if (!topic || !text) return {};
 
-  const generativeModel = vertexAI.getGenerativeModel({
-    model: process.env.GCP_VERTEX_MODEL_ID,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: EssayResponseSchema
-    },
-    systemInstruction: {
-      role: 'system',
-      parts: [{ "text": process.env.GCP_VERTEX_INSTRUCTION }]
-    },
-  });
-
-  const prompt = `${process.env.GCP_VERTEX_PROMPT_ESSAY} Topic:'${topic}' Answer:'${text}'`;
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_LITE, EssayResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+  
+  const prompt = `Topic:'${topic}' Answer:'${text}'`;
   console.log('prompt: ', prompt);
 
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    systemInstruction: { role: 'system', parts: [{ text: process.env.GCP_VERTEX_INSTRUCTION_ESSAY }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_ESSAY} ${process.env.GCP_VERTEX_SCORERUBRIC_ESSAY}` }] },
   };
-  const resp = await generativeModel.generateContent(request);
-  const contentResponse = resp.response.candidates[0].content.parts[0].text;
-  const result = JSON.parse(contentResponse.replaceAll('```', '').replaceAll('json', '').replaceAll('essayScore:', 'score:'));
-
-  console.log('result: ', result);
-  return result;
+  return extractResult(await generativeModel.generateContent(request));
 }
 
 export const scoreSWT = async function (topic, text) {
-  if (!topic || !text) return '';
+  if (!topic || !text) return {};
 
-  const generativeModel = vertexAI.getGenerativeModel({
-    model: process.env.GCP_VERTEX_MODEL_ID,
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: SWTResponseSchema
-    },
-    systemInstruction: {
-      role: 'system',
-      parts: [{ "text": process.env.GCP_VERTEX_INSTRUCTION }]
-    },
-  });
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_LITE, SWTResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
-  const prompt = `${process.env.GCP_VERTEX_PROMPT_SWT} Passage:'${topic}'. Answer:'${text}'`;
+  const prompt = `Passage:'${topic}'. Answer:'${text}'`;
   console.log('prompt: ', prompt);
 
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    systemInstruction: { role: 'system', parts: [{ text: process.env.GCP_VERTEX_INSTRUCTION_SWT }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_SWT} ${process.env.GCP_VERTEX_SCORERUBRIC_SWT}` }] },
   };
-  const resp = await generativeModel.generateContent(request);
-  const contentResponse = resp.response.candidates[0].content.parts[0].text;
-  const result = JSON.parse(contentResponse.replaceAll('```', '').replaceAll('json', '').replaceAll('essayScore:', 'score:'));
-
-  console.log('result: ', result);
-  return result;
+  return extractResult(await generativeModel.generateContent(request));
 }
 
-export const scoreSST = async function (audioUri, text) {
-  if (!audioUri || !text) return '';
+export const scoreSST = async function (audioTranscript, text) {
+  if (!audioTranscript || !text) return {};
 
-  const generativeModel = vertexAI.getGenerativeModel({
-    model: process.env.GCP_VERTEX_MODEL_SST,
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SSTResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Audio Transcript: '${audioTranscript}'. PTE Summary Spoken Text Answer: '${text}'`;
+  console.log('prompt: ', prompt);
+
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_SST} ${process.env.GCP_VERTEX_SCORERUBRIC_SST}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreRA = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Transcript: '${audioTranscript}'`;
+  // console.log('prompt: ', prompt);
+
+  const filePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RA} ${process.env.GCP_VERTEX_SCORERUBRIC_RA}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreRS = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Transcript: '${audioTranscript}'`;
+  // console.log('prompt: ', prompt);
+
+  const filePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RS} ${process.env.GCP_VERTEX_SCORERUBRIC_RS}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreDI = async function (imageUri, andioFile) {
+  if (!imageUri || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_DI}`;
+  console.log('prompt: ', prompt, imageUri);
+
+  const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const imagefilePart = {fileData: {fileUri: imageUri, mimeType: "image/jpeg"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart, imagefilePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_DI} ${process.env.GCP_VERTEX_SCORERUBRIC_DI}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreRL = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Transcript: ${audioTranscript}`;
+  // console.log('prompt: ', prompt);
+
+  const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RL} ${process.env.GCP_VERTEX_SCORERUBRIC_RL}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreASQ = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, ASQResponseSchema, process.env.GCP_VERTEX_INSTRUCTION, process.env.GCP_VERTEX_TEMPERATURE_ASQ);
+
+  const prompt = `Question: ${audioTranscript}`;
+  console.log('prompt: ', prompt);
+
+  const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_ASQ} ${process.env.GCP_VERTEX_SCORERUBRIC_ASQ}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+function generateModel(modelId, responseSchema, systemInstruction, temperature) {
+  return vertexAI.getGenerativeModel({
+    model: modelId,
     generationConfig: {
       responseMimeType: "application/json",
-      temperature: 0,
-      responseSchema: SSTResponseSchema
+      responseSchema: responseSchema,
+      temperature: temperature || 1
     },
     systemInstruction: {
       role: 'system',
-      parts: [{ "text": process.env.GCP_VERTEX_INSTRUCTION }]
+      parts: [{ "text": systemInstruction }]
     },
   });
+}
 
-  const prompt = `${process.env.GCP_VERTEX_PROMPT_SST} Answer: '${text}'`;
-  console.log('prompt: ', prompt);
-
-  const filePart = {fileData: {fileUri: audioUri, mimeType: "audio/mpeg"}};
-  const request = {
-    contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: process.env.GCP_VERTEX_INSTRUCTION_SST }] },
-  };
-  const resp = await generativeModel.generateContent(request);
-  console.log('resp: ', resp);
-  const contentResponse = resp.response.candidates[0].content.parts[0].text;
-  const result = JSON.parse(contentResponse.replaceAll('```', '').replaceAll('json', '').replaceAll('essayScore:', 'score:'));
+function extractResult(response){
+  if (!response) return {};
+  // console.log('response: ', JSON.stringify(response));
+  const contentResponse = response.response.candidates[0].content.parts[0].text;
+  const result = JSON.parse(contentResponse);
 
   console.log('result: ', result);
   return result;
 }
-
-//   const contentResponse = `{
-//   "feedback": {
-//     "Content": "The essay presents a somewhat unclear stance on the issue. While it initially seems to support advertisements in schools, the later part introduces reservations and caveats.  The arguments supporting advertisements are simplistic and lack depth. The counterarguments are also underdeveloped and not fully explored.",
-//     "Development_Structure_and_Coherence": "The essay lacks a clear structure.  The ideas are presented in a somewhat disorganized manner, jumping between arguments without smooth transitions. The essay lacks a strong concluding statement to summarize the main points.",
-//     "General_Linguistic_Range": "The range of grammatical structures is limited.  The essay relies heavily on simple sentence structures, which affects the overall fluency and sophistication.",
-//     "Grammar": "The essay contains several grammatical errors, including incorrect word order, tense inconsistency, and subject-verb agreement issues. There are also issues with articles and prepositions.",
-//     "Spelling": "There are several spelling errors throughout the essay, demonstrating a need for better proofreading. This affects the overall readability of the essay.",
-//     "Vocabulary_Range": "The vocabulary is limited and repetitive.  More sophisticated and varied vocabulary is needed to effectively express complex ideas."
-//   },
-//   "score": {
-//     "Content": 1,
-//     "Development_Structure_and_Coherence": 1,
-//     "General_Linguistic_Range": 1,
-//     "Grammar": 1,
-//     "Spelling": 1,
-//     "Vocabulary_Range": 1
-//   }
-// }`
-//   const result = JSON.parse(contentResponse);
