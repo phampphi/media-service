@@ -8,7 +8,7 @@ import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
 import { dictation } from './wit.js';
 import { analyseText, calculateVocabRange } from './textAnalysis.js';
-import { scoreEssay, scoreSWT, scoreSST, scoreRA, scoreRS, scoreDI, scoreRL, scoreASQ } from './aiScoring.js';
+import { scoreEssay, scoreSWT, scoreSST, scoreRA, scoreRS, scoreDI, scoreRL, scoreASQ, analyseRA } from './aiScoring.js';
 import { generatePTEReport } from './pteReport.js';
 
 const app = express();
@@ -17,13 +17,15 @@ const port = process.env.PORT || 3000;
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
-app.use(
-  expressjwt({
-    secret: process.env.JWT_SECRET,
-    issuer: process.env.JWT_ISSUER,
-    algorithms: ["HS256"],
-  }).unless({ path: ["/", "/services", "/services/pte/report"] })
-);
+if (process.env.NODE_ENV != 'development') {
+  app.use(
+    expressjwt({
+      secret: process.env.JWT_SECRET,
+      issuer: process.env.JWT_ISSUER,
+      algorithms: ["HS256"],
+    }).unless({ path: ["/", "/services", "/services/pte/report"] })
+  );
+}
 
 // app.post('/services/upload/s3', s3Upload.single('file'), (req, res) => {
 //   res.status(200).json({ success: true, fileLocation: req.file.location });
@@ -62,7 +64,6 @@ app.post('/services/scoring/gcp/:bucket', multer.single('file'), async (req, res
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
     const result = await dictation(req.file);
 
@@ -168,12 +169,25 @@ app.post('/services/scoring/ra/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRA(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
   catch (e) { console.log('scoring RA error: ', e); res.status(500).send(e); }
+});
+
+/** API to perform pronunciation analysis for PTE Read Aloud task. */
+app.post('/services/analysis/ra', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or Transcript is required.');
+    return;
+  }
+
+  try {
+    const resultAI = await analyseRA(req.body.audioTranscript, req.file);
+    res.status(200).send({ result: resultAI });
+  }
+  catch (e) { console.log('RA pronunciation analysis error: ', e); res.status(500).send(e); }
 });
 
 /** API to generate score and feedback from AI model for PTE Repeat Sentence task. */
@@ -188,7 +202,6 @@ app.post('/services/scoring/rs/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRS(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
@@ -208,7 +221,6 @@ app.post('/services/scoring/di/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
     const resultAI = await scoreDI(req.body.imageUri, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
@@ -228,7 +240,6 @@ app.post('/services/scoring/rl/:bucket', multer.single('file'), async (req, res)
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
     const resultAI = await scoreRL(req.body.audioTranscript, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
@@ -238,8 +249,8 @@ app.post('/services/scoring/rl/:bucket', multer.single('file'), async (req, res)
 
 /** API to generate score and feedback from AI model for PTE Answer Short Question task. */
 app.post('/services/scoring/asq/:bucket', multer.single('file'), async (req, res) => {
-  if (!req.file || !req.body.audioTranscript) {
-    res.status(400).send('AudioFile or AudioTranscript is required.');
+  if (!req.file || !req.body.sampleAnswer) {
+    res.status(400).send('AudioFile or sampleAnswer is required.');
     return;
   }
   if (!req.params.bucket) {
@@ -248,12 +259,11 @@ app.post('/services/scoring/asq/:bucket', multer.single('file'), async (req, res
   }
 
   try {
-    // const uploadResult = { message: "Uploaded the file successfully: ", fileLocation: "publicUrl" };
     const uploadResult = await gcpUpload(req);
-    const resultAI = await scoreASQ(req.body.audioTranscript, req.file);
+    const resultAI = await scoreASQ(req.body.sampleAnswer, req.file);
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
-  catch (e) { console.log('scoring RL error: ', e); res.status(500).send(e); }
+  catch (e) { console.log('scoring ASQ error: ', e); res.status(500).send(e); }
 });
 
 app.get('/services/pte/report', async (req, res) => {

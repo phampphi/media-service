@@ -7,6 +7,8 @@ const SWTResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SWT);
 const SSTResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SST);
 const SPKResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_SPK);
 const ASQResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_ASQ);
+const RAResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_RA);
+const RAAnalysisResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_RA_ANALYSIS);
 
 export const scoreEssay = async function (topic, text) {
   if (!topic || !text) return {};
@@ -56,7 +58,7 @@ export const scoreSST = async function (audioTranscript, text) {
 export const scoreRA = async function (audioTranscript, andioFile) {
   if (!audioTranscript || !andioFile) return {};
 
-  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, RAResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
   const prompt = `Transcript: '${audioTranscript}'`;
   // console.log('prompt: ', prompt);
@@ -130,6 +132,22 @@ export const scoreASQ = async function (audioTranscript, andioFile) {
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
     systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_ASQ} ${process.env.GCP_VERTEX_SCORERUBRIC_ASQ}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const analyseRA = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, RAAnalysisResponseSchema);
+
+  const prompt = `Orignial Transcript: '${audioTranscript}'`;
+  console.log('prompt: ', prompt);
+
+  const filePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RA_ANALYSIS}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }

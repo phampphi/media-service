@@ -19,8 +19,13 @@ const storage = new Storage({
 
 export const gcpUpload = function (req) {
   return new Promise((resolve, reject) => {
-    const bucket = storage.bucket(req.params.bucket);
+    console.log('Environment', process.env.NODE_ENV);
+    if (process.env.NODE_ENV == 'development') {
+      resolve({ message: "Uploaded the file successfully: ", fileLocation: "publicUrl" });
+      return;
+    }
 
+    const bucket = storage.bucket(req.params.bucket);
     const blob = bucket.file(req.file.originalname);
 
     const passthroughStream = new stream.PassThrough();
