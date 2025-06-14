@@ -40,4 +40,4 @@ jobs:
         platforms: linux/amd64,linux/arm64
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/media-services:1.0.8-ci
+        tags: ${{ secrets.DOCKER_USERNAME }}/media-services:1.0.9-ci
