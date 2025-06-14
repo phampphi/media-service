@@ -178,13 +178,13 @@ app.post('/services/scoring/ra/:bucket', multer.single('file'), async (req, res)
 
 /** API to perform pronunciation analysis for PTE Read Aloud task. */
 app.post('/services/analysis/ra', multer.single('file'), async (req, res) => {
-  if (!req.file || !req.body.audioTranscript) {
-    res.status(400).send('AudioFile or Transcript is required.');
+  if (!req.file || !req.body.sampleAnswer) {
+    res.status(400).send('AudioFile or SampleAnswer is required.');
     return;
   }
 
   try {
-    const resultAI = await analyseRA(req.body.audioTranscript, req.file);
+    const resultAI = await analyseRA(req.body.sampleAnswer, req.file);
     res.status(200).send({ result: resultAI });
   }
   catch (e) { console.log('RA pronunciation analysis error: ', e); res.status(500).send(e); }
