@@ -136,6 +136,38 @@ export const scoreASQ = async function (audioTranscript, andioFile) {
   return extractResult(await generativeModel.generateContent(request));
 }
 
+export const scoreSGD = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Transcript: ${audioTranscript}`;
+  // console.log('prompt: ', prompt);
+
+  const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_SGD} ${process.env.GCP_VERTEX_SCORERUBRIC_SGD}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
+export const scoreRTS = async function (audioTranscript, andioFile) {
+  if (!audioTranscript || !andioFile) return {};
+
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+
+  const prompt = `Transcript: ${audioTranscript}}`;
+  // console.log('prompt: ', prompt);
+
+  const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
+  const request = {
+    contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RTS} ${process.env.GCP_VERTEX_SCORERUBRIC_RTS}` }] },
+  };
+  return extractResult(await generativeModel.generateContent(request));
+}
+
 export const analyseRA = async function (audioTranscript, andioFile) {
   if (!audioTranscript || !andioFile) return {};
 

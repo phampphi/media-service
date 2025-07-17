@@ -8,7 +8,7 @@ import { sendEmail } from './sendEmail.js';
 import { multer } from './multer.js';
 import { dictation } from './wit.js';
 import { analyseText, calculateVocabRange } from './textAnalysis.js';
-import { scoreEssay, scoreSWT, scoreSST, scoreRA, scoreRS, scoreDI, scoreRL, scoreASQ, analyseRA } from './aiScoring.js';
+import { scoreEssay, scoreSWT, scoreSST, scoreRA, scoreRS, scoreDI, scoreRL, scoreASQ, analyseRA, scoreSGD, scoreRTS } from './aiScoring.js';
 import { generatePTEReport } from './pteReport.js';
 
 const app = express();
@@ -264,6 +264,44 @@ app.post('/services/scoring/asq/:bucket', multer.single('file'), async (req, res
     res.status(200).send({ ...uploadResult, result: resultAI });
   }
   catch (e) { console.log('scoring ASQ error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Summarise Groupd Discussion task. */
+app.post('/services/scoring/sgd/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or AudioTranscript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreSGD(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring SGD error: ', e); res.status(500).send(e); }
+});
+
+/** API to generate score and feedback from AI model for PTE Respond to a Situation task. */
+app.post('/services/scoring/rts/:bucket', multer.single('file'), async (req, res) => {
+  if (!req.file || !req.body.audioTranscript) {
+    res.status(400).send('AudioFile or AudioTranscript is required.');
+    return;
+  }
+  if (!req.params.bucket) {
+    res.status(400).send('No bucket found.');
+    return;
+  }
+
+  try {
+    const uploadResult = await gcpUpload(req);
+    const resultAI = await scoreRTS(req.body.audioTranscript, req.file);
+    res.status(200).send({ ...uploadResult, result: resultAI });
+  }
+  catch (e) { console.log('scoring RTS error: ', e); res.status(500).send(e); }
 });
 
 app.get('/services/pte/report', async (req, res) => {
