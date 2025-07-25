@@ -13,7 +13,7 @@ const RAAnalysisResponseSchema = JSON.parse(process.env.GCP_VERTEX_RES_SCHEMA_RA
 export const scoreEssay = async function (topic, text) {
   if (!topic || !text) return {};
 
-  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_LITE, EssayResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, EssayResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
   
   const prompt = `Topic:'${topic}' Answer:'${text}'`;
   console.log('prompt: ', prompt);
@@ -28,7 +28,7 @@ export const scoreEssay = async function (topic, text) {
 export const scoreSWT = async function (topic, text) {
   if (!topic || !text) return {};
 
-  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_LITE, SWTResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SWTResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
   const prompt = `Passage:'${topic}'. Answer:'${text}'`;
   console.log('prompt: ', prompt);
@@ -58,15 +58,15 @@ export const scoreSST = async function (audioTranscript, text) {
 export const scoreRA = async function (audioTranscript, andioFile) {
   if (!audioTranscript || !andioFile) return {};
 
-  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, RAResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
+  const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, RAResponseSchema, process.env.GCP_VERTEX_INSTRUCTION, process.env.GCP_VERTEX_TEMPERATURE_ASQ);
 
-  const prompt = `Transcript: '${audioTranscript}'`;
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_SPK} Transcript: '${audioTranscript}'`;
   // console.log('prompt: ', prompt);
 
   const filePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RA} ${process.env.GCP_VERTEX_SCORERUBRIC_RA}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RA} ${process.env.GCP_VERTEX_SCORERUBRIC_RA} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
@@ -82,7 +82,7 @@ export const scoreRS = async function (audioTranscript, andioFile) {
   const filePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, filePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RS} ${process.env.GCP_VERTEX_SCORERUBRIC_RS}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RS} ${process.env.GCP_VERTEX_SCORERUBRIC_RS} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
@@ -99,7 +99,7 @@ export const scoreDI = async function (imageUri, andioFile) {
   const imagefilePart = {fileData: {fileUri: imageUri, mimeType: "image/jpeg"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart, imagefilePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_DI} ${process.env.GCP_VERTEX_SCORERUBRIC_DI}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_DI} ${process.env.GCP_VERTEX_SCORERUBRIC_DI} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
@@ -109,13 +109,13 @@ export const scoreRL = async function (audioTranscript, andioFile) {
 
   const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
-  const prompt = `Transcript: ${audioTranscript}`;
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_SPK} Transcript: ${audioTranscript}`;
   // console.log('prompt: ', prompt);
 
   const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RL} ${process.env.GCP_VERTEX_SCORERUBRIC_RL}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RL} ${process.env.GCP_VERTEX_SCORERUBRIC_RL} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
@@ -125,7 +125,7 @@ export const scoreASQ = async function (audioTranscript, andioFile) {
 
   const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, ASQResponseSchema, process.env.GCP_VERTEX_INSTRUCTION, process.env.GCP_VERTEX_TEMPERATURE_ASQ);
 
-  const prompt = `Question: ${audioTranscript}`;
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_SPK} ${audioTranscript}`;
   console.log('prompt: ', prompt);
 
   const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
@@ -141,13 +141,13 @@ export const scoreSGD = async function (audioTranscript, andioFile) {
 
   const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
-  const prompt = `Transcript: ${audioTranscript}`;
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_SPK} Transcript: ${audioTranscript}`;
   // console.log('prompt: ', prompt);
 
   const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_SGD} ${process.env.GCP_VERTEX_SCORERUBRIC_SGD}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_SGD} ${process.env.GCP_VERTEX_SCORERUBRIC_SGD} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
@@ -157,13 +157,13 @@ export const scoreRTS = async function (audioTranscript, andioFile) {
 
   const generativeModel = generateModel(process.env.GCP_VERTEX_MODEL_GEMINI_FLASH, SPKResponseSchema, process.env.GCP_VERTEX_INSTRUCTION);
 
-  const prompt = `Transcript: ${audioTranscript}}`;
+  const prompt = `${process.env.GCP_VERTEX_PROMPT_SPK} Transcript: ${audioTranscript}}`;
   // console.log('prompt: ', prompt);
 
   const audioFilePart = {inline_data: {data: andioFile.buffer.toString('base64'), mimeType: "audio/wav"}};
   const request = {
     contents: [{ role: 'user', parts: [{ text: prompt }, audioFilePart] }],
-    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RTS} ${process.env.GCP_VERTEX_SCORERUBRIC_RTS}` }] },
+    systemInstruction: { role: 'system', parts: [{ text: `${process.env.GCP_VERTEX_INSTRUCTION_RTS} ${process.env.GCP_VERTEX_SCORERUBRIC_RTS} ${process.env.GCP_VERTEX_SCORE_RUBRIC_PRONUNCIATION} ${process.env.GCP_VERTEX_SCORE_RUBRIC_FLUENCY}` }] },
   };
   return extractResult(await generativeModel.generateContent(request));
 }
